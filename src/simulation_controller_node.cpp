@@ -56,16 +56,12 @@ void demo(int argc, char** argv)
     std::vector<double> target_position_1 = {90*M_PI/180, -54*M_PI/180, 0 ,0 ,-36*M_PI/180,-90*M_PI/180};
     std::vector<double> target_position_2 = {-90*M_PI/180, -54*M_PI/180, 0, 0, -36*M_PI/180, -90*M_PI/180};
 
-    /* Initialize ROS. */
-    ros::init(argc, argv, "sim_controller_" + std::to_string(robot_id) );
-
     std::cout << "Publishing to: " << t.JOINT_POS_SUB << std::endl;
     std::cout << "Publishing to: " << t.GRIPPER_STATE_SUB << std::endl;
     ros::Duration delay_seconds(5); // Time for the gripper to close/open.
 
     /* Start dancing. */
     std::cout << "Moving to target position 1 and closing gripper." << std::endl;
-    delay_seconds.sleep(); 
     if(robot.publishNewTargetPosition(stadard_pos) || robot.openGripper()) {
         std::cout << "Wrong number of degrees of freedom" << std::endl;
         return;
@@ -75,6 +71,7 @@ void demo(int argc, char** argv)
         std::cout << "Wrong number of degrees of freedom" << std::endl;
         return;
     }
+    delay_seconds.sleep(); 
     if(robot.closeGripper()) {
         std::cout << "Gripper not defined." << std::endl;
         return;

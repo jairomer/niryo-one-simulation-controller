@@ -34,24 +34,24 @@ namespace simulation {
 class Topic 
 {
 public:
-    int robot_id;     /* ID of the controlled robot. */
-    const std::string TOPIC_ROOT = "/coppeliaSIM/NiryoOne_" + std::to_string(robot_id);
-    const std::string TIME_PUB = TOPIC_ROOT + "/simulationTime";
+    int robot_id = 0;     /* ID of the controlled robot. */
+    std::string TOPIC_ROOT = "/coppeliaSIM/NiryoOne_" + std::to_string(robot_id);
+    std::string TIME_PUB = TOPIC_ROOT + "/simulationTime";
 
     /* Gripper Control Topic Names */
-    const std::string GRIPPER_STATE_PUB = TOPIC_ROOT + "/isGripperOpenPub";
-    const std::string GRIPPER_STATE_SUB = TOPIC_ROOT + "/GripperCommandSub";
+    std::string GRIPPER_STATE_PUB = TOPIC_ROOT + "/isGripperOpenPub";
+    std::string GRIPPER_STATE_SUB = TOPIC_ROOT + "/GripperCommandSub";
 
     /* Robot State Topic Names */
-    const std::string RUNNING_TIME_TOPIC = TOPIC_ROOT + "/simulationTime";
-    const std::string JOINT_VEL_PUB     = TOPIC_ROOT + "/targetJointAngularVelocityPub";
-    const std::string JOINT_VEL_SUB     = TOPIC_ROOT + "/targetJointAngularVelocitySub";
-    const std::string JOINT_POS_PUB     = TOPIC_ROOT + "/targetJointAngularPositionPub";
-    const std::string JOINT_POS_SUB     = TOPIC_ROOT + "/targetJointAngularPositionSub";
-    const std::string JOINT_FORCE_PUB   = TOPIC_ROOT + "/targetJointAngularForcePub";
-    const std::string JOINT_FORCE_SUB   = TOPIC_ROOT + "/targetJointAngularForceSub";
+    std::string RUNNING_TIME_TOPIC = TOPIC_ROOT + "/simulationTime";
+    std::string JOINT_VEL_PUB     = TOPIC_ROOT + "/targetJointAngularVelocityPub";
+    std::string JOINT_VEL_SUB     = TOPIC_ROOT + "/targetJointAngularVelocitySub";
+    std::string JOINT_POS_PUB     = TOPIC_ROOT + "/targetJointAngularPositionPub";
+    std::string JOINT_POS_SUB     = TOPIC_ROOT + "/targetJointAngularPositionSub";
+    std::string JOINT_FORCE_PUB   = TOPIC_ROOT + "/targetJointAngularForcePub";
+    std::string JOINT_FORCE_SUB   = TOPIC_ROOT + "/targetJointAngularForceSub";
 
-    Topic(int id = 0) { robot_id = id; }
+    Topic(int id) { robot_id = id; }
 
     Topic(const Topic& t) { robot_id = t.robot_id; }
 
@@ -69,8 +69,8 @@ private:
     std_msgs::Bool open_gripper;
     ros::Publisher gripper_pub;
     ros::Subscriber gripper_sub;
-    const bool OPEN = false; 
-    const bool CLOSE = true;
+    const bool OPEN = true; 
+    const bool CLOSE = false;
 
 public:
 
@@ -93,8 +93,8 @@ public:
         
         mtx = new std::mutex();
 
-        gripper_pub = nh.advertise<std_msgs::Bool>(t.GRIPPER_STATE_PUB, 10);
-        gripper_sub = nh.subscribe(t.GRIPPER_STATE_SUB, 10 , &GripperRosControl::gripper_state_callback, this);
+        gripper_pub = nh.advertise<std_msgs::Bool>(t.GRIPPER_STATE_SUB, 10);
+        gripper_sub = nh.subscribe(t.GRIPPER_STATE_PUB, 10 , &GripperRosControl::gripper_state_callback, this);
     }
 
     void open()
