@@ -39,33 +39,61 @@
 #include "simulation.hpp"
 #include "ros/ros.h"
 
+/**
+ * Sets a linear magnitude to angular. 
+ * 
+ * m     ->  radians
+ * m/s   ->  radians/s
+ * m/s^2 ->  radians/s^2
+ * 
+*/
+float ang(float linear) { return linear*M_PI/180; }
+
+/**
+ * Print vector to stdout.
+*/
+template<typename T>
+void print_vector(std::vector<T>& v)
+{
+    for (auto it = v.begin(); it != v.end(); it++)
+    {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+}
 
 /**
  * Simulation control from the controller node. Used for demonstration pur
 */
-void demo(int argc, char** argv) 
+void test_position_control(int argc, char** argv) 
 {
       /* Initialize ROS. */
     int robot_id = 0;
     ros::init(argc, argv, "sim_controller_" + std::to_string(robot_id) );
-    simulation::Topic t(robot_id);
-    simulation::NiryoOne robot(0, true);
+    digital_twin::NiryoOne robot(true, false, false);
 
     /* Target positions. */
     std::vector<double> stadard_pos = {0, 0, 0, 0, 0, 0};
     std::vector<double> target_position_1 = {90*M_PI/180, -54*M_PI/180, 0 ,0 ,-36*M_PI/180,-90*M_PI/180};
     std::vector<double> target_position_2 = {-90*M_PI/180, -54*M_PI/180, 0, 0, -36*M_PI/180, -90*M_PI/180};
 
-    std::cout << "Publishing to: " << t.JOINT_POS_SUB << std::endl;
-    std::cout << "Publishing to: " << t.GRIPPER_STATE_SUB << std::endl;
+    //std::cout << "Publishing to: " << t.JOINT_POS_SUB << std::endl;
+    //std::cout << "Publishing to: " << t.GRIPPER_STATE_SUB << std::endl;
     ros::Duration delay_seconds(5); // Time for the gripper to close/open.
 
     /* Start dancing. */
+    if(robot.publishNewTargetPosition(stadard_pos)) {
+        std::cout << "Wrong number of degrees of freedom" << std::endl;
+        return;
+    }
+    delay_seconds.sleep(); 
+
     std::cout << "Moving to target position 1 and closing gripper." << std::endl;
     if(robot.publishNewTargetPosition(stadard_pos) || robot.openGripper()) {
         std::cout << "Wrong number of degrees of freedom" << std::endl;
         return;
     }
+    
     delay_seconds.sleep(); 
     if(robot.publishNewTargetPosition(target_position_1)) {
         std::cout << "Wrong number of degrees of freedom" << std::endl;
@@ -104,11 +132,12 @@ void demo(int argc, char** argv)
         return;
     }
     std::cout << "done." << std::endl;
+
+    ros::shutdown(); // Cleanup
 }
 
 int main(int argc, char** argv) 
 { 
-    demo(argc, argv);
-    
+    test_position_control(argc, argv);
     return 0;
 }
