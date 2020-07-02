@@ -36,8 +36,13 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+
 #include "simulation.hpp"
 #include "ros/ros.h"
+
+
 
 /**
  * Sets a linear magnitude to angular. 
@@ -63,9 +68,9 @@ void print_vector(std::vector<T>& v)
 }
 
 /**
- * Simulation control from the controller node. Used for demonstration pur
+ * Digital twin control from the controller node.
 */
-void test_position_control(int argc, char** argv) 
+void test_digital_twin_control(int argc, char** argv) 
 {
       /* Initialize ROS. */
     int robot_id = 0;
@@ -136,8 +141,51 @@ void test_position_control(int argc, char** argv)
     ros::shutdown(); // Cleanup
 }
 
+/**
+ * Physical twin control from the controller node. 
+*/
+void test_physical_twin_control(int argc, char** argv)
+{
+    ros::init(argc, argv, "physical_twin_controller");
+    ros::NodeHandle nh;
+    ros::AsyncSpinner spinner(1); 
+    spinner.start();
+
+    static const std::string ARM_GROUP = "arm";
+    static const std::string TOOL_GROUP = "tool";
+
+    moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
+    const robot_state::JointModelGroup* joint_model_group = 
+        arm_group.getCurrentState()->getJointModelGroup(ARM_GROUP);
+
+    // Not to use for now. We need a tool enabled robot.
+    //moveit::planning_interface::MoveGroupInterface tool_group(TOOL_GROUP);
+    //    tool_group.getCurrentState()->getJointModelGroup(TOOL_GROUP);
+
+    geometry_msgs::Pose target_pose;
+    auto assignToPose = [](geometry_msgs::Pose& p, double x, double y, double z, double o){ 
+        p.orientation.w = 1.0;
+        p.position.x = x;
+        p.position.y = y;
+        p.position.z = z;
+    };
+
+    assignToPose(target_pose, 0.28, -0.2, 0.5, 1.0);
+
+    // Compute a plan. 
+    moveit::planning_interface::MoveGroupInterface::Plan master_plan;
+    bool success = (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO_NAMED("physical_twin", "Plan result: %s", success ? "SUCCESS" : "FAILED");
+
+    if (success)
+        arm_group.execute(master_plan);
+
+    ros::shutdown();
+}  
+
 int main(int argc, char** argv) 
 { 
-    test_position_control(argc, argv);
+    //test_digital_twin_control(argc, argv);
+    test_physical_twin_control(argc, argv);
     return 0;
 }
