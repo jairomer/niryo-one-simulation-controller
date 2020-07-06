@@ -143,6 +143,7 @@ void test_digital_twin_control(int argc, char** argv)
 
 /**
  * Physical twin control from the controller node. 
+ * TODO: Simulation not responding to MoveIt executions.
 */
 void test_physical_twin_control(int argc, char** argv)
 {
@@ -152,7 +153,7 @@ void test_physical_twin_control(int argc, char** argv)
     spinner.start();
 
     static const std::string ARM_GROUP = "arm";
-    static const std::string TOOL_GROUP = "tool";
+    static const std::string TOOL_GROUP = "tool_action";
 
     moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
     const robot_state::JointModelGroup* joint_model_group = 
@@ -162,24 +163,106 @@ void test_physical_twin_control(int argc, char** argv)
     //moveit::planning_interface::MoveGroupInterface tool_group(TOOL_GROUP);
     //    tool_group.getCurrentState()->getJointModelGroup(TOOL_GROUP);
 
-    geometry_msgs::Pose target_pose;
-    auto assignToPose = [](geometry_msgs::Pose& p, double x, double y, double z, double o){ 
-        p.orientation.w = 1.0;
-        p.position.x = x;
-        p.position.y = y;
-        p.position.z = z;
-    };
+//    geometry_msgs::Pose target_pose;
+//    auto assignToPose = [](geometry_msgs::Pose& p, double x, double y, double z, double o){ 
+//        p.orientation.w = 1.0;
+//        p.position.x = x;
+//        p.position.y = y;
+//        p.position.z = z;
+//    };
+//    double x[] = {0.28, 0.50, 0.60};
+//    ros::Duration delay_seconds(5); 
+//
+//    for (int i=0; i<100; i++) {
+//        assignToPose(target_pose, x[i%3], 0.2, 0.2, 0.2);
+//        arm_group.setPoseTarget(target_pose);
+//        // Compute a plan. 
+//        moveit::planning_interface::MoveGroupInterface::Plan master_plan;
+//        bool success = (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+//        ROS_INFO_NAMED("physical_twin", "Plan result: %s", success ? "SUCCESS" : "FAILED");
+//
+//        if (success) 
+//        {
+//            while(!arm_group.execute(master_plan)) {}
+//            delay_seconds.sleep();
+//        }
+//
+//    }
 
-    assignToPose(target_pose, 0.28, -0.2, 0.5, 1.0);
-
-    // Compute a plan. 
+    ros::Duration delay_seconds(5); 
+    std::vector<double> standard_pos        = {0, 0, 0, 0, 0, 0};
+    std::vector<double> target_position_1   = {90*M_PI/180, -54*M_PI/180, 0 ,0 ,-36*M_PI/180,-90*M_PI/180};
+    std::vector<double> target_position_2   = {-90*M_PI/180, -54*M_PI/180, 0, 0, -36*M_PI/180, -90*M_PI/180};
     moveit::planning_interface::MoveGroupInterface::Plan master_plan;
-    bool success = (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("physical_twin", "Plan result: %s", success ? "SUCCESS" : "FAILED");
-
-    if (success)
+    
+    bool success = false;
+    if(!arm_group.setJointValueTarget(standard_pos)) {
+        std::cout << "Out of bounds." << std::endl;
+        return;
+    }    
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
         arm_group.execute(master_plan);
+    }
+    
+    delay_seconds.sleep(); 
 
+    std::cout << "Moving to target position 1 and opening gripper." << std::endl;
+    if(!arm_group.setJointValueTarget(standard_pos)) {
+        assert(false && "Out of bounds.");
+        return;
+    }    
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+        arm_group.execute(master_plan);
+    }
+    delay_seconds.sleep(); 
+
+    if(!arm_group.setJointValueTarget(target_position_1)) {
+        assert(false && "Out of bounds.");
+        return;
+    }    
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+        arm_group.execute(master_plan);
+    }
+
+    delay_seconds.sleep(); 
+
+    // TODO: Close gripper.
+
+    delay_seconds.sleep(); 
+    std::cout << "Moving to target initial pose." << std::endl;
+    if(!arm_group.setJointValueTarget(standard_pos)) {
+        assert(false && "Out of bounds.");
+        return;
+    }
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+        arm_group.execute(master_plan);
+    }
+
+    delay_seconds.sleep(); 
+
+    std::cout << "Moving to target position 2 and opening gripper." << std::endl;
+    if(!arm_group.setJointValueTarget(target_position_2)) {
+        assert(false && "Out of bounds.");
+        return;
+    }
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+        arm_group.execute(master_plan);
+    }
+
+    // TODO: Open gripper.
+
+    delay_seconds.sleep(); 
+
+    std::cout << "Comming back to initial position." << std::endl;
+    if(!arm_group.setJointValueTarget(standard_pos)) {
+        assert(false && "Out of bounds.");
+        return;
+    }
+    if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+        arm_group.execute(master_plan);
+    }
+    std::cout << "done." << std::endl;
+    
     ros::shutdown();
 }  
 
