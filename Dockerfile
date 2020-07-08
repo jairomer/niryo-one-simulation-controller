@@ -2,8 +2,6 @@
 FROM ubuntu:16.04
 MAINTAINER jairomer@protonmail.com
 
-COPY hosts /etc/hosts
-
 WORKDIR /root
 RUN useradd -ms /bin/bash controller
 
@@ -38,6 +36,16 @@ RUN pip3 install -U catkin_tools
 
 RUN rosdep init
 
+RUN wget https://sourceforge.net/projects/ptpd/files/ptpd/2.3.1/ptpd-2.3.1.tar.gz && \
+	cp ptpd-2.3.1.tar.gz /opt && \
+	cd /opt && \
+	tar xvzf ptpd-2.3.1.tar.gz && rm ptpd-2.3.1.tar.gz && mv /opt/ptpd-2.3.1 /opt/ptpd && \
+	cd /opt/ptpd && sudo ./configure && make && make install
+
+#RUN cp /etc/init.d/skeleton /etc/init.d/ptp2.service && \
+#	echo "/opt/ptpd/src/ptpd2 -i wlp4s0 -s " > /etc/init.d/ptp2.service && \ 
+#	systemctl enable ptp2.service && systemctl start ptp2.service
+RUN echo "/opt/ptpd/src/ptpd2 -i wlp4s0 -s &>/dev/null &" > /etc/rc.local
 USER controller
 WORKDIR /home/controller
 
@@ -46,12 +54,12 @@ RUN rosdep update && mkdir -p catkin_ws/src && cd catkin_ws && catkin init && cd
     mkdir simulation_controller && mkdir simulation_controller/src && \
     mkdir simulation_controller/launch && cd ..
 
+# Copy project source into the catkin workspace and build everything
 COPY CMakeLists.txt catkin_ws/src/simulation_controller/ 
 COPY package.xml catkin_ws/src/simulation_controller/ 
 COPY src/* catkin_ws/src/simulation_controller/src/
 COPY launch/* catkin_ws/src/simulation_controller/launch/
 RUN cd catkin_ws && bash -c 'source /opt/ros/kinetic/setup.bash && catkin_make'
 
-#CMD bash 
-CMD bash -c "source /opt/ros/kinetic/setup.bash && source catkin_ws/devel/setup.bash\
-      && roslaunch simulation_controller simulation_controller_node.launch"  
+CMD bash -c "source /opt/ros/kinetic/setup.bash && source catkin_ws/devel/setup.bash && \
+      	roslaunch simulation_controller simulation_controller_node.launch"  
