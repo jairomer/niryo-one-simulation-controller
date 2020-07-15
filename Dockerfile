@@ -54,6 +54,8 @@ RUN rosdep update && mkdir -p catkin_ws/src && cd catkin_ws && catkin init && cd
     mkdir simulation_controller && mkdir simulation_controller/src && \
     mkdir simulation_controller/launch && cd ..
 
+RUN cd catkin_ws && bash -c 'source /opt/ros/kinetic/setup.bash && catkin_make' && cd ..
+
 # Copy project source into the catkin workspace and build everything
 COPY CMakeLists.txt catkin_ws/src/simulation_controller/ 
 COPY package.xml catkin_ws/src/simulation_controller/ 
