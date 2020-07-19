@@ -25,9 +25,7 @@
 #include <mutex>
 #include <vector>
 
-namespace digital_twin {
-
-class GripperRosControl
+class DTGripper
 {
 private:
     std::mutex* mtx; 
@@ -41,57 +39,24 @@ private:
     const char* GRIPPER_STATE_PUB = "/coppeliaSIM/NiryoOne/isGripperOpenPub";
     const char* GRIPPER_STATE_SUB = "/coppeliaSIM/NiryoOne/GripperCommandSub";
 public:
-
-    void gripper_state_callback(const std_msgs::Bool::ConstPtr& msg) 
-    {
-        mtx->lock();
-        is_gripper_open = msg->data;
-        mtx->unlock();
-    }
-
-    /**
-     * The NodeHandle has to be initialized. 
-    */
-    GripperRosControl(ros::NodeHandle& nh, bool isGripperClosed = false) 
+    void gripper_state_callback(const std_msgs::Bool::ConstPtr& msg); 
+    DTGripper(ros::NodeHandle& nh, bool isGripperClosed = false) 
     { 
         if (!nh.ok()) throw std::invalid_argument("NodeHandle not Ok");
-        is_gripper_open     = isGripperClosed; 
-        close_gripper.data  = CLOSE;
-        open_gripper.data   = OPEN;
-        
-        mtx = new std::mutex();
-
-        gripper_pub = nh.advertise<std_msgs::Bool>(GRIPPER_STATE_SUB, 10);
-        gripper_sub = nh.subscribe(GRIPPER_STATE_PUB, 10 , &GripperRosControl::gripper_state_callback, this);
+        this->is_gripper_open     = isGripperClosed; 
+        this->close_gripper.data  = CLOSE;
+        this->open_gripper.data   = OPEN;
+        this->mtx = new std::mutex();
+        this->gripper_pub = nh.advertise<std_msgs::Bool>(GRIPPER_STATE_SUB, 10);
+        this->gripper_sub = nh.subscribe(GRIPPER_STATE_PUB, 10 , &DTGripper::gripper_state_callback, this);
     }
-
-    void open()
-    {
-        mtx->lock(); 
-        gripper_pub.publish(open_gripper);
-        is_gripper_open = true;
-        mtx->unlock(); 
-    }
-
-    void close() 
-    { 
-        mtx->lock();    
-        gripper_pub.publish(close_gripper);
-        is_gripper_open = false;
-        mtx->unlock();    
-    }
-
+    void open();
+    void close();
     bool isOpen() { return is_gripper_open; }
-
-    ~GripperRosControl() 
-    {
-        gripper_sub.shutdown();
-        gripper_pub.shutdown();
-        delete mtx;
-    }
+    ~DTGripper();
 };
 
-class NiryoOne 
+class DigitalTwin 
 {
 private:
     
@@ -107,7 +72,7 @@ private:
     ros::Subscriber  joint_state_sub;
     ros::Subscriber  simulation_time_sub;
     ros::NodeHandle* nh;
-    GripperRosControl* gripper;
+    DTGripper* gripper;
     double simulation_time;
 
     /* Constants */
@@ -122,70 +87,35 @@ public:
      * Set of callbacks called by ROS subscribers to update the current
      * physical parameters of the Niryo One. 
     */
-    void joint_states_cb(const sensor_msgs::JointState::ConstPtr& msg) 
-    { 
-        mtx_cp->lock();
-        this->joint_status.position = msg->position;
-        this->joint_status.velocity = msg->velocity;
-        this->joint_status.effort   = msg->effort;
-        mtx_cp->unlock();
-    }
-
-    void sim_time_cb(const std_msgs::Float32::ConstPtr& msg) 
-    {
-        mtx_sim->lock();
-        this->simulation_time = msg->data;
-        mtx_sim->unlock();
-    }
-
-    NiryoOne(bool has_gripper, bool is_griper_closed = false, bool subscriber_only = false) 
+    void joint_states_cb(const sensor_msgs::JointState::ConstPtr& msg);
+    void sim_time_cb(const std_msgs::Float32::ConstPtr& msg);
+    
+    DigitalTwin(bool has_gripper, bool is_griper_closed = false, bool subscriber_only = false)
     {
         this->subscriber_only = subscriber_only;
         this->has_gripper = has_gripper;
-        mtx_tp = new std::mutex();
-        mtx_cp = new std::mutex();
-        mtx_sim = new std::mutex();
-        nh = new ros::NodeHandle;
+        this->mtx_tp = new std::mutex();
+        this->mtx_cp = new std::mutex();
+        this->mtx_sim = new std::mutex();
+        this->nh = new ros::NodeHandle;
 
-        if (has_gripper) {
-            gripper = new GripperRosControl(*nh, is_griper_closed);
+        if (this->has_gripper) {
+            this->gripper = new DTGripper(*nh, is_griper_closed);
         }
         
-        target_position_publisher = 
+        this->target_position_publisher = 
             nh->advertise<std_msgs::Float64MultiArray>(JOINT_POS_ORDER ,  DEFAULT_QUEUE_SIZE);
 
-        joint_state_sub = 
-            nh->subscribe(JOINT_STATES, DEFAULT_QUEUE_SIZE, &NiryoOne::joint_states_cb, this);
+        this->joint_state_sub = 
+            nh->subscribe(JOINT_STATES, DEFAULT_QUEUE_SIZE, &DigitalTwin::joint_states_cb, this);
 
-        simulation_time_sub = 
-            nh->subscribe(SIM_TIME, DEFAULT_QUEUE_SIZE, &NiryoOne::sim_time_cb, this);
-
+        this->simulation_time_sub = 
+            nh->subscribe(SIM_TIME, DEFAULT_QUEUE_SIZE, &DigitalTwin::sim_time_cb, this);
     }
 
-    ~NiryoOne()
-    {
-        delete gripper;
-        delete mtx_tp;
-        delete mtx_cp;
-        delete mtx_sim;
-        target_position_publisher.shutdown();
-        joint_state_sub.shutdown();
-        delete nh;
-    }
-
-    int set_subscriber_mode(bool mode) 
-    {
-        subscriber_only = mode;
-    }
-
-    float getSimulationTime() 
-    { 
-        float ret; 
-        mtx_sim->lock();
-        ret = simulation_time;
-        mtx_sim->unlock();
-        return ret; 
-    }
+    ~DigitalTwin();
+    int set_subscriber_mode(bool mode);
+    float getSimulationTime();
 
     /**
      * Publishes the target position on the joints of the Niryo One 
@@ -198,21 +128,7 @@ public:
      * Will return -2 if the current instance is in subscriber_only mode.
      * Will return 0 otherwise.
     */
-    int publishNewTargetPosition(std::vector<double>& positions) 
-    {
-        if (subscriber_only)
-            return -2;
-        if (positions.size() != 6)
-            return -1;
-        
-        mtx_tp->lock();
-        std_msgs::Float64MultiArray target_position;
-        target_position.data = positions;
-        target_position_publisher.publish(target_position);
-        mtx_tp->unlock();
-
-        return 0;
-    }
+    int publishNewTargetPosition(std::vector<double>& positions);
 
     /**
      * Stores the lastly received position of the joints of the Niryo One 
@@ -221,16 +137,7 @@ public:
      * If parameter vector is empty, then -1 will be return.
      * Otherwise, 0 will be return. 
     */
-    int getCurrentPosition(std::vector<double>& current_pos)
-    {
-        if (current_pos.size() != 0) 
-            return -1;
-        mtx_cp->lock();
-        for (int i=0; i<6; ++i) 
-            current_pos.push_back(joint_status.position[i]);
-        mtx_cp->unlock();
-        return 0;
-    }
+    int getCurrentPosition(std::vector<double>& current_pos);
     
     /**
      * Stores the lastly received velocity of the joints of the Niryo One 
@@ -239,16 +146,7 @@ public:
      * If parameter vector is empty, then -1 will be return.
      * Otherwise, 0 will be return. 
     */
-    int getCurrentVelocity(std::vector<double>& current_vel)
-    {
-        if (current_vel.size() != 0) 
-            return -1;
-        mtx_cp->lock();
-        for (int i=0; i<6; ++i) 
-            current_vel.push_back(joint_status.velocity[i]);
-        mtx_cp->unlock();
-        return 0;
-    }
+    int getCurrentVelocity(std::vector<double>& current_vel);
     
     /**
      * Stores the lastly received force of the joints of the Niryo One 
@@ -257,16 +155,7 @@ public:
      * If parameter vector is empty, then -1 will be return.
      * Otherwise, 0 will be return. 
     */
-    int getCurrentForce(std::vector<double>& current_f)
-    {
-        if (current_f.size() != 0) 
-            return -1;
-        mtx_cp->lock();
-        for (int i=0; i<6; ++i) 
-            current_f.push_back(joint_status.effort[i]);
-        mtx_cp->unlock();
-        return 0;
-    }
+    int getCurrentForce(std::vector<double>& current_f);
 
     /**
      * Opens the gripper of the Niryo One has been initialized
@@ -275,14 +164,7 @@ public:
      * It will return -1 if there is no gripper, -2 if in subscriber only mode 
      * and 0 otherwise.
      */
-    int openGripper()
-    {
-        if(has_gripper && !subscriber_only) {
-            gripper->open();
-            return 0;
-        }
-        return -1;
-    }
+    int openGripper();
 
     /**
      * Closes the gripper of the Niryo One has been initialized
@@ -290,16 +172,7 @@ public:
      * 
      * It will return -1 if there is no gripper and 0 otherwise.
      */
-    int closeGripper()
-    {
-        if(has_gripper) {
-            gripper->close();
-            return 0;
-        }
-        return -1;
-    }
+    int closeGripper();
 };
-
-}; // !simulation
 
 #endif

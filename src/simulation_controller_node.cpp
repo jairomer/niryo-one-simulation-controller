@@ -11,26 +11,7 @@
  *  
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
- *  
- * Joint State Information: The move_group monitors the /joint_states topic for determining 
- * where each joint of the robot is. 
- *  -> This program has to implement a joint State publisher. 
- *  -> There is a ROS packet that might help:  http://wiki.ros.org/joint_state_publisher
- * 
- * Transform Information: The move_group monitors transform information using the ROS library. 
- * this allows the node to get global information about the robot's pose among other things. 
- * The move_group will listen to TF. To publish TF information, we need to have a 
- * robot_state_publisher node running on the simulation script, or at a higher level. 
- *   -> There is a ROS packet that might help: http://wiki.ros.org/robot_state_publisher
- * 
- * Controller Interface: The move_group talks to the controllers on the robot using the 
- * FollowJointTrajectoryAction interface. This is a ROS action interface. A server on the 
- * robot needs to service this action and move_it will only instantiate a client to talk to 
- * this controller action server on your robot. 
-*/ 
+ */ 
 #define _USE_MATH_DEFINES // We want to use the M_PI constant.
 
 #include <iostream>
@@ -83,7 +64,7 @@ void test_digital_twin_control(int argc, char** argv)
       /* Initialize ROS. */
     int robot_id = 0;
     ros::init(argc, argv, "sim_controller_" + std::to_string(robot_id) );
-    digital_twin::NiryoOne robot(true, false, false);
+    DigitalTwin robot(true, false, false);
 
     /* Target positions. */
     std::vector<double> stadard_pos = {0, 0, 0, 0, 0, 0};
@@ -161,14 +142,14 @@ void test_physical_twin_control(int argc, char** argv)
     spinner.start();
 
     static const std::string ARM_GROUP = "arm";
-    static const std::string TOOL_GROUP = "tool_action";
+    //static const std::string TOOL_GROUP = "tool_action";
 
     moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
     const robot_state::JointModelGroup* joint_model_group = 
         arm_group.getCurrentState()->getJointModelGroup(ARM_GROUP);
 
-    moveit::planning_interface::MoveGroupInterface tool(TOOL_GROUP);
-    const robot_state::
+    //moveit::planning_interface::MoveGroupInterface tool(TOOL_GROUP);
+
 
     ros::Duration delay_seconds(4.5); 
     std::vector<double> standard_pos        = {0, 0, 0, 0, 0, 0};
@@ -176,107 +157,155 @@ void test_physical_twin_control(int argc, char** argv)
     std::vector<double> target_position_2   = {-90*M_PI/180, -54*M_PI/180, 0, 0, -36*M_PI/180, -90*M_PI/180};
     moveit::planning_interface::MoveGroupInterface::Plan master_plan;
     
-    ::digital_twin::GripperRosControl simulation_gripper(nh);
+    DTGripper simulation_gripper(nh);
 
     while (true)
     {
         simulation_gripper.open();
+        ROS_INFO("Opening gripper.");
+        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
+
         if(!arm_group.setJointValueTarget(standard_pos)) {
-            std::cout << "Out of bounds." << std::endl;
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
             return;
         }    
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
         }
-        
+        arm_group.execute(master_plan);
+
+        ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep(); 
 
+        ROS_INFO("Moving to target position 1.");
         if(!arm_group.setJointValueTarget(target_position_1)) {
-            assert(false && "Out of bounds.");
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
             return;
         }    
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
         }
+        arm_group.execute(master_plan);
 
-        //delay_seconds.sleep(); 
+        ROS_INFO("Closing gripper.");        
         simulation_gripper.close();
+        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
+
+        ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep();
 
-        std::cout << "Moving to target initial pose." << std::endl;
+        ROS_INFO("Moving to target initial pose.");
         if(!arm_group.setJointValueTarget(standard_pos)) {
-            assert(false && "Out of bounds.");
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
             return;
-        }
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
+        }    
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
         }
 
-        //delay_seconds.sleep(); 
-
-        std::cout << "Moving to target position 2 and opening gripper." << std::endl;
+        ROS_INFO("Moving to target position 2 and opening gripper.");
         if(!arm_group.setJointValueTarget(target_position_2)) {
-            assert(false && "Out of bounds.");
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
             return;
-        }
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
-        }
-
-        simulation_gripper.open();
-        delay_seconds.sleep(); 
-
-        std::cout << "Comming back to initial position." << std::endl;
-        if(!arm_group.setJointValueTarget(standard_pos)) {
-            assert(false && "Out of bounds.");
-            return;
-        }
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
+        }    
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
         }
         
-        // Move the box back to the left side.
+        simulation_gripper.open();
+        ROS_INFO("Opening gripper.");
+        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
-        //delay_seconds.sleep(); 
+        ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
+        delay_seconds.sleep(); 
+
+
+        ROS_INFO("Comming back to initial position.");
+        if(!arm_group.setJointValueTarget(standard_pos)) {
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
+            return;
+        }    
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
+        }
+        arm_group.execute(master_plan);
 
         simulation_gripper.open();
-        std::cout << "Moving to target position 2 and opening gripper." << std::endl;
-        if(!arm_group.setJointValueTarget(target_position_2)) {
-            assert(false && "Out of bounds.");
-            return;
-        }
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
-        }
+        ROS_INFO("Opening gripper.");
+        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
+        simulation_gripper.open();
+        ROS_INFO("Moving to target position 2");
+        if(!arm_group.setJointValueTarget(target_position_2)) {
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
+            return;
+        }    
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
+        }
+        arm_group.execute(master_plan);
+
+        ROS_INFO("Closing gripper.");
+        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
         simulation_gripper.close();
+
+        ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep(); 
 
+        ROS_INFO("Comming back to initial position.");
         if(!arm_group.setJointValueTarget(standard_pos)) {
-            std::cout << "Out of bounds." << std::endl;
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
             return;
         }    
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
         }
-        
-        //delay_seconds.sleep(); 
-
-        std::cout << "Moving to target position 1 and opening gripper." << std::endl;
-        if(!arm_group.setJointValueTarget(target_position_1)) {
-            assert(false && "Out of bounds.");
-            return;
-        }    
-        if (arm_group.plan(master_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-            arm_group.execute(master_plan);
-        }
-        simulation_gripper.open();
-        delay_seconds.sleep(); 
+        arm_group.execute(master_plan);
     }
     
     
     ros::shutdown();
 }  
+
+void test_setup(int argc, char ** argv)
+{
+    ros::init(argc, argv, "physical_twin_controller");
+    ros::NodeHandle nh;
+    ros::AsyncSpinner spinner(1); 
+    spinner.start();
+
+    static const std::string ARM_GROUP = "arm";
+    //static const std::string TOOL_GROUP = "tool_action";
+
+    moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
+    const robot_state::JointModelGroup* joint_model_group = 
+        arm_group.getCurrentState()->getJointModelGroup(ARM_GROUP);
+
+    std::vector<moveit_msgs::CollisionObject> collision_objects;
+    collision_objects.resize(1);
+    collision_objects[0].id     =   "box";
+    collision_objects[0].header.frame_id = "joint0"; // TODO: This might not work.
+    collision_objects[0].primitives.resize(1);
+    collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
+    collision_objects[0].primitives[0].dimensions.resize(3);
+    collision_objects[0].primitives[0].dimensions[0] = 0.02; // TODO: Setup right measures. 
+    collision_objects[0].primitives[0].dimensions[1] = 0.02;
+    collision_objects[0].primitives[0].dimensions[2] = 0.02;
+    collision_objects[0].primitive_poses.resize(1);
+
+    // IDEA: Get object position from coppeliaSim.
+    collision_objects[0].primitive_poses[0].position.x = 0.5;
+    collision_objects[0].primitive_poses[0].position.y = 0;
+    collision_objects[0].primitive_poses[0].position.z = 0;
+
+}
 
 int main(int argc, char** argv) 
 { 
