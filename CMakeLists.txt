@@ -10,6 +10,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  niryo_one_msgs
   geometry_msgs
   cmake_modules
   moveit_core

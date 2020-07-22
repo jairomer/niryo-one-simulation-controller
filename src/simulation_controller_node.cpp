@@ -21,9 +21,10 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <std_msgs/Bool.h>
-#include <geometry_msgs/Vector3Stamped.h>
+
 
 #include "simulation.hpp"
+#include "physical.hpp"
 #include "ros/ros.h"
 
 void exit_handler(int s)
@@ -59,7 +60,7 @@ void print_vector(std::vector<T>& v)
 /**
  * Digital twin control from the controller node.
 */
-void test_digital_twin_control(int argc, char** argv) 
+void test_digital_twin_control_joint(int argc, char** argv) 
 {
       /* Initialize ROS. */
     int robot_id = 0;
@@ -130,6 +131,8 @@ void test_digital_twin_control(int argc, char** argv)
     ros::shutdown(); // Cleanup
 }
 
+
+
 /**
  * Physical twin control from the controller node. 
  * Clocks must be synchronized using ptpd if running on different machines. 
@@ -158,10 +161,11 @@ void test_physical_twin_control(int argc, char** argv)
     moveit::planning_interface::MoveGroupInterface::Plan master_plan;
     
     DTGripper simulation_gripper(nh);
-
-    while (true)
+    PTGripper physical_gripper;
+    while (ros::ok())
     {
         simulation_gripper.open();
+        physical_gripper.open();
         ROS_INFO("Opening gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
@@ -191,6 +195,7 @@ void test_physical_twin_control(int argc, char** argv)
 
         ROS_INFO("Closing gripper.");        
         simulation_gripper.close();
+        physical_gripper.close();
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
         ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
@@ -217,6 +222,7 @@ void test_physical_twin_control(int argc, char** argv)
         }
         
         simulation_gripper.open();
+        physical_gripper.close();
         ROS_INFO("Opening gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
@@ -236,10 +242,10 @@ void test_physical_twin_control(int argc, char** argv)
         arm_group.execute(master_plan);
 
         simulation_gripper.open();
+        physical_gripper.close();
         ROS_INFO("Opening gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
-        simulation_gripper.open();
         ROS_INFO("Moving to target position 2");
         if(!arm_group.setJointValueTarget(target_position_2)) {
             ROS_INFO("ERROR: Cannot set Joint Value Target");
@@ -254,6 +260,7 @@ void test_physical_twin_control(int argc, char** argv)
         ROS_INFO("Closing gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
         simulation_gripper.close();
+        physical_gripper.close();
 
         ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep(); 
@@ -270,42 +277,8 @@ void test_physical_twin_control(int argc, char** argv)
         arm_group.execute(master_plan);
     }
     
-    
     ros::shutdown();
 }  
-
-void test_setup(int argc, char ** argv)
-{
-    ros::init(argc, argv, "physical_twin_controller");
-    ros::NodeHandle nh;
-    ros::AsyncSpinner spinner(1); 
-    spinner.start();
-
-    static const std::string ARM_GROUP = "arm";
-    //static const std::string TOOL_GROUP = "tool_action";
-
-    moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
-    const robot_state::JointModelGroup* joint_model_group = 
-        arm_group.getCurrentState()->getJointModelGroup(ARM_GROUP);
-
-    std::vector<moveit_msgs::CollisionObject> collision_objects;
-    collision_objects.resize(1);
-    collision_objects[0].id     =   "box";
-    collision_objects[0].header.frame_id = "joint0"; // TODO: This might not work.
-    collision_objects[0].primitives.resize(1);
-    collision_objects[0].primitives[0].type = collision_objects[0].primitives[0].BOX;
-    collision_objects[0].primitives[0].dimensions.resize(3);
-    collision_objects[0].primitives[0].dimensions[0] = 0.02; // TODO: Setup right measures. 
-    collision_objects[0].primitives[0].dimensions[1] = 0.02;
-    collision_objects[0].primitives[0].dimensions[2] = 0.02;
-    collision_objects[0].primitive_poses.resize(1);
-
-    // IDEA: Get object position from coppeliaSim.
-    collision_objects[0].primitive_poses[0].position.x = 0.5;
-    collision_objects[0].primitive_poses[0].position.y = 0;
-    collision_objects[0].primitive_poses[0].position.z = 0;
-
-}
 
 int main(int argc, char** argv) 
 { 

@@ -14,24 +14,41 @@
  */
 #ifndef PHYSICAL_HPP
 #define PHYSICAL_HPP
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <niryo_one_msgs/RobotMoveAction.h>
+#include <actionlib/client/simple_action_client.h>
 
-class PhysicalTwin
+class PTGripper 
 {
 private:
-    ros::NodeHandle nh;
-    ros::AsyncSpinner spinner(1);
-    moveit::planning_interface::MoveGroupInterface arm_group(ARM_GROUP);
-    const robot_state::JointModelGroup* joint_model_group,
+    actionlib::SimpleActionClient<niryo_one_msgs::RobotMoveAction>* ac;
+    niryo_one_msgs::ToolCommand command;
+    niryo_one_msgs::RobotMoveActionGoal action;
 public:
-    static const std::string ARM_GROUP = "arm";
-    PhysicalTwin() {
-        joint_model_group = 
-            arm_group.getCurrentState()->getJointModelGroup(ARM_GROUP);
+    PTGripper() {
+        ac = new actionlib::SimpleActionClient<niryo_one_msgs::RobotMoveAction>("/niryo_one/commander/robot_action", true);
+        command.gripper_open_speed = 100;
+        command.tool_id = 12;
+        action.goal.cmd.cmd_type = 6;
     }
 
-    moveit::planning_interface::MoveItErrorCode setJoints(std::vector<double>& joints);
-};
+    ~PTGripper() {
+        delete ac;
+    }
+
+    /**
+        Opens the gripper. 
+
+        Returns true on success and false on timeout.
+    */
+    bool open();
+
+    /**
+        Closes the gripper. 
+
+        Returns true on success and false on timeout.
+    */
+    bool close();
+}; 
+
 
 #endif
