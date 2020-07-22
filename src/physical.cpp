@@ -15,17 +15,19 @@
 
 #include "physical.hpp"
 
-moveit::planning_interface::MoveItErrorCode PhysicalTwin::setJoints(std::vector<double>& joints)
+
+bool PTGripper::open()
 {
-    moveit::planning_interface::MoveGroupInterface::Plan master_plan;
-    moveit::planning_interface::MoveItErrorCode ret;
-    if(!(ret = arm_group.setJointValueTarget(standard_pos))) {
-        ROS_INFO("ERROR: Cannot set Joint Value Target");
-        return ret;
-    }
-    if ((ret = arm_group.plan(master_plan)) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
-        ROS_INFO("ERROR: Planning framework returned a non-zero code.");
-        return ret;             
-    }
-    return arm_group.execute(master_plan);
+    command.cmd_type = 1;
+    action.goal.cmd.tool_cmd = command;
+    this->ac->sendGoal(action.goal);
+    return this->ac->waitForResult(ros::Duration(10.0));
+}
+
+bool PTGripper::close()
+{
+    command.cmd_type = 2;
+    action.goal.cmd.tool_cmd = command;
+    this->ac->sendGoal(action.goal);
+    return this->ac->waitForResult(ros::Duration(10.0));
 }
