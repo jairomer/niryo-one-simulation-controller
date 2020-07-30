@@ -21,7 +21,7 @@ bool PTGripper::open()
     command.cmd_type = 1;
     action.goal.cmd.tool_cmd = command;
     this->ac->sendGoal(action.goal);
-    return this->ac->waitForResult(ros::Duration(10.0));
+    return this->ac->waitForResult(ros::Duration(3.0));
 }
 
 bool PTGripper::close()
@@ -29,5 +29,5 @@ bool PTGripper::close()
     command.cmd_type = 2;
     action.goal.cmd.tool_cmd = command;
     this->ac->sendGoal(action.goal);
-    return this->ac->waitForResult(ros::Duration(10.0));
+    return this->ac->waitForResult(ros::Duration(3.0));
 }

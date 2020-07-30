@@ -60,7 +60,7 @@ void print_vector(std::vector<T>& v)
 /**
  * Digital twin control from the controller node.
 */
-void test_digital_twin_control_joint(int argc, char** argv) 
+void test_digital_twin_control(int argc, char** argv) 
 {
       /* Initialize ROS. */
     int robot_id = 0;
@@ -160,14 +160,14 @@ void test_physical_twin_control(int argc, char** argv)
     std::vector<double> target_position_2   = {-90*M_PI/180, -54*M_PI/180, 0, 0, -36*M_PI/180, -90*M_PI/180};
     moveit::planning_interface::MoveGroupInterface::Plan master_plan;
     
-    DTGripper simulation_gripper(nh);
+    DTGripper simulation_gripper(nh, true);
     PTGripper physical_gripper;
     while (ros::ok())
     {
         simulation_gripper.open();
         physical_gripper.open();
         ROS_INFO("Opening gripper.");
-        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
+        delay_seconds.sleep();
 
         if(!arm_group.setJointValueTarget(standard_pos)) {
             ROS_INFO("ERROR: Cannot set Joint Value Target");
@@ -192,11 +192,11 @@ void test_physical_twin_control(int argc, char** argv)
             return;             
         }
         arm_group.execute(master_plan);
+        delay_seconds.sleep();
 
         ROS_INFO("Closing gripper.");        
         simulation_gripper.close();
         physical_gripper.close();
-        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
         ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep();
@@ -210,6 +210,7 @@ void test_physical_twin_control(int argc, char** argv)
             ROS_INFO("ERROR: Planning framework returned a non-zero code.");
             return;             
         }
+        arm_group.execute(master_plan);
 
         ROS_INFO("Moving to target position 2 and opening gripper.");
         if(!arm_group.setJointValueTarget(target_position_2)) {
@@ -220,15 +221,14 @@ void test_physical_twin_control(int argc, char** argv)
             ROS_INFO("ERROR: Planning framework returned a non-zero code.");
             return;             
         }
-        
+        arm_group.execute(master_plan);
+
         simulation_gripper.open();
-        physical_gripper.close();
+        physical_gripper.open();
         ROS_INFO("Opening gripper.");
-        //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
         ROS_INFO("Waiting %f sec...", delay_seconds.toSec());
         delay_seconds.sleep(); 
-
 
         ROS_INFO("Comming back to initial position.");
         if(!arm_group.setJointValueTarget(standard_pos)) {
@@ -240,10 +240,11 @@ void test_physical_twin_control(int argc, char** argv)
             return;             
         }
         arm_group.execute(master_plan);
+        delay_seconds.sleep();
 
-        simulation_gripper.open();
-        physical_gripper.close();
-        ROS_INFO("Opening gripper.");
+        //simulation_gripper.open();
+        //physical_gripper.open();
+        //ROS_INFO("Opening gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
 
         ROS_INFO("Moving to target position 2");
@@ -256,7 +257,8 @@ void test_physical_twin_control(int argc, char** argv)
             return;             
         }
         arm_group.execute(master_plan);
-
+        delay_seconds.sleep();
+        
         ROS_INFO("Closing gripper.");
         //ROS_INFO("End effector reference frame: %s", arm_group.getEndEffectorLink().c_str());
         simulation_gripper.close();
@@ -275,6 +277,23 @@ void test_physical_twin_control(int argc, char** argv)
             return;             
         }
         arm_group.execute(master_plan);
+
+        ROS_INFO("Moving to target position 1.");
+        if(!arm_group.setJointValueTarget(target_position_1)) {
+            ROS_INFO("ERROR: Cannot set Joint Value Target");
+            return;
+        }    
+        if (arm_group.plan(master_plan) != moveit::planning_interface::MoveItErrorCode::SUCCESS) {
+            ROS_INFO("ERROR: Planning framework returned a non-zero code.");
+            return;             
+        }
+        arm_group.execute(master_plan);
+
+        delay_seconds.sleep();
+        simulation_gripper.open();
+        physical_gripper.open();
+        ROS_INFO("Opening gripper");
+        delay_seconds.sleep();
     }
     
     ros::shutdown();
