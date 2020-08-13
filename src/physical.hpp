@@ -26,8 +26,8 @@ private:
 public:
     PTGripper() {
         ac = new actionlib::SimpleActionClient<niryo_one_msgs::RobotMoveAction>("/niryo_one/commander/robot_action", true);
-        command.gripper_open_speed = 100;
-        command.tool_id = 12;
+        command.gripper_open_speed = 100; 
+        command.tool_id = 11;
         action.goal.cmd.cmd_type = 6;
     }
 

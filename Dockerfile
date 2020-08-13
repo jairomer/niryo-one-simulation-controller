@@ -36,16 +36,12 @@ RUN pip3 install -U catkin_tools
 
 RUN rosdep init
 
-RUN wget https://sourceforge.net/projects/ptpd/files/ptpd/2.3.1/ptpd-2.3.1.tar.gz && \
-	cp ptpd-2.3.1.tar.gz /opt && \
-	cd /opt && \
-	tar xvzf ptpd-2.3.1.tar.gz && rm ptpd-2.3.1.tar.gz && mv /opt/ptpd-2.3.1 /opt/ptpd && \
-	cd /opt/ptpd && sudo ./configure && make && make install
+#RUN wget https://sourceforge.net/projects/ptpd/files/ptpd/2.3.1/ptpd-2.3.1.tar.gz && \
+#	cp ptpd-2.3.1.tar.gz /opt && \
+#	cd /opt && \
+#	tar xvzf ptpd-2.3.1.tar.gz && rm ptpd-2.3.1.tar.gz && mv /opt/ptpd-2.3.1 /opt/ptpd && \
+#	cd /opt/ptpd && sudo ./configure && make && make install
 
-#RUN cp /etc/init.d/skeleton /etc/init.d/ptp2.service && \
-#	echo "/opt/ptpd/src/ptpd2 -i wlp4s0 -s " > /etc/init.d/ptp2.service && \ 
-#	systemctl enable ptp2.service && systemctl start ptp2.service
-RUN echo "/opt/ptpd/src/ptpd2 -i wlp4s0 -s &>/dev/null &" > /etc/rc.local
 USER controller
 WORKDIR /home/controller
 
