@@ -12,30 +12,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */ 
+#ifndef TESTING_HPP
+#define TESTING_HPP
 
-#include <signal.h>
-#include <iostream>
-#include "testing.hpp"
-#include "ros/ros.h"
+#define _USE_MATH_DEFINES // We want to use the M_PI constant.
 
-void exit_handler(int s)
-{
-    printf("Exiting");
-    ros::shutdown();
-    exit(0);
-}
+bool digital_twin_integration_tests(int argc, char** argv);
 
-int main(int argc, char** argv) 
-{ 
-    struct sigaction sigIntHandler;
-    sigIntHandler.sa_handler = exit_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
+void test_physical_twin_control(int argc, char** argv);
 
-    sigaction(SIGINT, &sigIntHandler, NULL);
-    
-    bool success = digital_twin_integration_tests(argc, argv);
-    if (success)
-        test_physical_twin_control(argc, argv);
-    return 0;
-}
+#endif
