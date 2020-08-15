@@ -15,7 +15,6 @@
 
 #include "physical.hpp"
 
-
 bool PTGripper::open()
 {
     command.cmd_type = 1;

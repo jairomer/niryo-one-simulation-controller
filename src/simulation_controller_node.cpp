@@ -37,5 +37,8 @@ int main(int argc, char** argv)
     bool success = digital_twin_integration_tests(argc, argv);
     if (success)
         test_physical_twin_control(argc, argv);
-    return 0;
+    else
+        ROS_INFO("Simulated twin not ready. Exiting.")
+
+    exit(0);
 }

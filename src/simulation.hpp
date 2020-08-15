@@ -25,7 +25,10 @@
 #include <mutex>
 #include <vector>
 
-class DTGripper
+namespace simulation 
+{
+
+class Gripper
 {
 private:
     std::mutex* mtx; 
@@ -36,143 +39,113 @@ private:
     ros::Subscriber gripper_sub;
     const bool OPEN = true; 
     const bool CLOSE = false;
-    const char* GRIPPER_STATE_PUB = "/coppeliaSIM/NiryoOne/isGripperOpenPub";
-    const char* GRIPPER_STATE_SUB = "/coppeliaSIM/NiryoOne/GripperCommandSub";
-public:
+    const char* GRIPPER_STATE_PUB = "/coppeliaSIM/NiryoOne/is_gripper_open";
+    const char* GRIPPER_STATE_SUB = "/coppeliaSIM/NiryoOne/gripper_command";
+
     void gripper_state_callback(const std_msgs::Bool::ConstPtr& msg); 
-    DTGripper(ros::NodeHandle& nh, bool isGripperClosed = false) 
-    { 
-        if (!nh.ok()) throw std::invalid_argument("NodeHandle not Ok");
-        this->is_gripper_open     = isGripperClosed; 
-        this->close_gripper.data  = CLOSE;
-        this->open_gripper.data   = OPEN;
-        this->mtx = new std::mutex();
-        this->gripper_pub = nh.advertise<std_msgs::Bool>(GRIPPER_STATE_SUB, 10);
-        this->gripper_sub = nh.subscribe(GRIPPER_STATE_PUB, 10 , &DTGripper::gripper_state_callback, this);
-    }
+public:
+    Gripper(ros::NodeHandle& nh);
     void open();
     void close();
-    bool isOpen() { return is_gripper_open; }
-    ~DTGripper();
+    bool isOpen();
+    ~Gripper();
 };
 
-class DigitalTwin 
+
+
+
+class NiryoOneDT
 {
 private:
-    
-    int id;
-    bool has_gripper;
-    bool subscriber_only; 
-    std::mutex* mtx_tp;  
-    std::mutex* mtx_cp;
-    std::mutex* mtx_sim;
-    
-    sensor_msgs::JointState joint_status;
-    ros::Publisher   target_position_publisher;
-    ros::Subscriber  joint_state_sub;
-    ros::Subscriber  simulation_time_sub;
-    ros::NodeHandle* nh;
-    DTGripper* gripper;
-    double simulation_time;
 
-    /* Constants */
-    const uint DEFAULT_QUEUE_SIZE = 10;
-    const char* JOINT_STATES    = "/coppeliaSIM/NiryoOne/joint_states";
-    const char* JOINT_POS_ORDER = "/coppeliaSIM/NiryoOne/joint_states_order";
-    const char* SIM_TIME        = "/coppeliaSIM/NiryoOne/simulationTime";
+    /* Subscribers */
+    ros::Subscriber joint_sub;
+    ros::Subscriber sim_time_sub;
 
-public:
+    /* Gripper Interface to the simulation. */
+    simulation::Gripper* gripper;
 
-    /**
-     * Set of callbacks called by ROS subscribers to update the current
-     * physical parameters of the Niryo One. 
-    */
+    /* Joint and simulation time callbacks. */
     void joint_states_cb(const sensor_msgs::JointState::ConstPtr& msg);
     void sim_time_cb(const std_msgs::Float32::ConstPtr& msg);
     
-    DigitalTwin(bool has_gripper, bool is_griper_closed = false, bool subscriber_only = false)
-    {
-        this->subscriber_only = subscriber_only;
-        this->has_gripper = has_gripper;
-        this->mtx_tp = new std::mutex();
-        this->mtx_cp = new std::mutex();
-        this->mtx_sim = new std::mutex();
-        this->nh = new ros::NodeHandle;
+    /* Mutable Values */
+    sensor_msgs::JointState joints;
+    float simulation_time;
 
-        if (this->has_gripper) {
-            this->gripper = new DTGripper(*nh, is_griper_closed);
-        }
-        
-        this->target_position_publisher = 
-            nh->advertise<std_msgs::Float64MultiArray>(JOINT_POS_ORDER ,  DEFAULT_QUEUE_SIZE);
+    /* Constants */
+    const uint DEFAULT_QUEUE_SIZE = 1;
+    const char* JOINT_STATES    = "/coppeliaSIM/NiryoOne/joint_states";
+    const char* JOINT_POS_ORDER = "/coppeliaSIM/NiryoOne/joint_states_order";
+    const char* SIM_TIME        = "/coppeliaSIM/NiryoOne/simulation_time";
 
-        this->joint_state_sub = 
-            nh->subscribe(JOINT_STATES, DEFAULT_QUEUE_SIZE, &DigitalTwin::joint_states_cb, this);
+    /* Mutexes */
+    std::mutex* joint_mtx;
+    std::mutex* sim_time_mtx;
+public:
 
-        this->simulation_time_sub = 
-            nh->subscribe(SIM_TIME, DEFAULT_QUEUE_SIZE, &DigitalTwin::sim_time_cb, this);
-    }
+    NiryoOneDT(ros::NodeHandle& nh);
 
-    ~DigitalTwin();
-    int set_subscriber_mode(bool mode);
-    float getSimulationTime();
+    ~NiryoOneDT();
 
     /**
-     * Publishes the target position on the joints of the Niryo One 
-     * running on coppeliaSim.
-     * 
-     * A vector of 6 degrees of freedom representing the positions in
-     * radians is expected.
-     * 
-     * Will return -1 if the vector is larger or less than 6. 
-     * Will return -2 if the current instance is in subscriber_only mode.
-     * Will return 0 otherwise.
+     * Returns the simulation time in seconds. 
     */
-    int publishNewTargetPosition(std::vector<double>& positions);
+    float getSimulationTime();
 
     /**
      * Stores the lastly received position of the joints of the Niryo One 
      * running on coppeliaSim on the vector given as parameter.
      * 
-     * If parameter vector is empty, then -1 will be return.
-     * Otherwise, 0 will be return. 
+     * If disconnected from simulation, will return false.
+     * Otherwise, true will be return. 
     */
-    int getCurrentPosition(std::vector<double>& current_pos);
+    bool getCurrentPosition(std::vector<double>& current_pos);
     
     /**
      * Stores the lastly received velocity of the joints of the Niryo One 
      * running on coppeliaSim on the vector given as parameter.
      * 
-     * If parameter vector is empty, then -1 will be return.
-     * Otherwise, 0 will be return. 
+     * If disconnected from simulation, will return false.
+     * Otherwise, true will be return. 
     */
-    int getCurrentVelocity(std::vector<double>& current_vel);
+    bool getCurrentVelocity(std::vector<double>& current_vel);
     
     /**
      * Stores the lastly received force of the joints of the Niryo One 
      * running on coppeliaSim on the vector given as parameter.
      * 
-     * If parameter vector is empty, then -1 will be return.
-     * Otherwise, 0 will be return. 
+     * If disconnected from simulation, will return false.
+     * Otherwise, true will be return. 
     */
-    int getCurrentForce(std::vector<double>& current_f);
+    bool getCurrentEffort(std::vector<double>& current_f);
 
     /**
-     * Opens the gripper of the Niryo One has been initialized
-     * with one.
+     * Opens the gripper of the Niryo One inside the simulation. 
      * 
-     * It will return -1 if there is no gripper, -2 if in subscriber only mode 
-     * and 0 otherwise.
+     * It will return false if no connection and true otherwise.
      */
-    int openGripper();
+    bool openGripper();
 
     /**
      * Closes the gripper of the Niryo One has been initialized
      * with one.
      * 
-     * It will return -1 if there is no gripper and 0 otherwise.
+     * It will return false if no connection and true otherwise.
      */
-    int closeGripper();
+    bool closeGripper();
+
+    /**
+     * Will return true if the gripper is open or false if it is closed. 
+    */
+    bool isGripperOpen();
+
+    /**
+     * Verifies that the current node is connected to a ros master with 
+     * an instance of the the simulation node.
+    */
+    bool connected();
 };
 
+} // !simulation 
 #endif
