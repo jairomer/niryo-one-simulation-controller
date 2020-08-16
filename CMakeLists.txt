@@ -142,7 +142,9 @@ include_directories(
 add_executable(${PROJECT_NAME}_node 
   src/simulation_controller_node.cpp
   src/physical.cpp
-  src/simulation.cpp)
+  src/sim_gripper.cpp
+  src/sim_niryo_one.cpp
+  src/testing.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

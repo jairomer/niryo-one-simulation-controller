@@ -1,13 +1,19 @@
  
 <launch>
 
+  <!-- Set the param that trajectory_execution_manager needs to find the controller plugin -->
+  <arg name="moveit_controller_manager" default="moveit_simple_controller_manager/MoveItSimpleControllerManager" />
+  <param name="moveit_controller_manager" value="$(arg moveit_controller_manager)"/>
+  <!-- load controller_list -->
+  <rosparam file="$(find niryo_one_moveit_config)/config/controllers.yaml"/>
+  <!-- ########################################################################## -->
   <!-- By default, we do not start a database (it can be large) -->
-  <arg name="db" default="false" />
+  <arg name="db" default="false"/>
   <!-- Allow user to specify database location -->
   <arg name="db_path" default="$(find niryo_one_moveit_config)/default_warehouse_mongo_db" />
 
   <!-- By default, we are not in debug mode -->
-  <arg name="debug" default="false" />
+  <arg name="debug" default="false"/>
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
   <include file="$(find niryo_one_moveit_config)/launch/planning_context.launch">
@@ -31,6 +37,12 @@
     <arg name="debug" value="$(arg debug)"/>
   </include>
   
+  <!-- When you run a move group node, you may need to remap the topic /joint_states to /robot/joint_states, 
+       otherwise MoveIt! won’t have feedback from the joints.-->
+  <!--node pkg="moveit_ros_move_group" type="move_group" output="screen" name="joint_remapper">
+    <remap from="joint_states" to="robot/joint_states"/>
+  </node-->
+
   <node name="simulation_controller_node" pkg="simulation_controller" type="simulation_controller_node" respawn="false" output="screen">
   </node>
 
