@@ -1,20 +1,26 @@
-# Simulation Controller
+# Controller Node
 
-A controller for the Niryo One simulation on coppeliaSIM using the ROS interface. 
+## What is it?
 
-## Compile it
-clone in catkin_ws/src. 
+This repository contains the code to control a Niryo One robot using the MoveIt framework and to access a digital twin I made as undergraduate final thesis in 2020 through an ROS API in C++. 
 
-`catkin_make`
+It contains a couple of integration tests to verify that the whole thing works and a routine to make the robot dance as a demonstration. 
 
 ## Run it
 
-0. Prepare for current setup. 
- - Configuration for the environment is contained in the docker run command on `run_container.sh`
- - All relevant hosts on the ROS network should be added as hosts. 
- - Set the ROS master uri to the one on your setup.
- - Set the ROS ip to the one of the interface connecting to the ROS network.
+To run this you will need to first connect to a network where the Niryo One and the digital twin is are deployed. 
 
-1. Execute script to setup ROS environment as a docker container and start node.
-    `./run_container`
+The following image is an example of a deployment. 
 
+![Network Diagram Example](network_diagram.png)
+
+Then you will need to change the values for the ROS_IP, the ROS_MASTER, and setup the host IPs for the Niryo One and the digital twin hosts inside the script `./run_container`. 
+
+In order for MoveIt to be able to control the Niryo One in real time, you will need to synchronize the clocks. This can be done very efficiently by setting a ptpd master on a node of the network and connecting clients to it.  
+
+Once you have done that, install Docker in your machine and execute the `./run_container` script. 
+It will take some time to setup because we have to assemble a ROS kinetic image. 
+
+Once it is done, it will start launching integration tests to both the simulated twin and the digital twin. 
+
+You can find the code to deploy the digital twin [here](https://github.com/jairomer/niryo_one_simulation). 
