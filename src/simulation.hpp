@@ -76,7 +76,6 @@ private:
     /* Constants */
     const uint DEFAULT_QUEUE_SIZE = 1;
     const char* JOINT_STATES    = "/coppeliaSIM/NiryoOne/joint_states";
-    const char* JOINT_POS_ORDER = "/coppeliaSIM/NiryoOne/joint_states_order";
     const char* SIM_TIME        = "/coppeliaSIM/NiryoOne/simulation_time";
 
     /* Mutexes */

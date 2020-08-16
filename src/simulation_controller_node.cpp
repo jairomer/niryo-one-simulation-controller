@@ -38,7 +38,8 @@ int main(int argc, char** argv)
     if (success)
         test_physical_twin_control(argc, argv);
     else
-        ROS_INFO("Simulated twin not ready. Exiting.")
+        ROS_INFO("Simulated twin not ready. Exiting.");
 
+    std::cout << std::flush;
     exit(0);
 }

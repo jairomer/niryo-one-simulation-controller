@@ -50,6 +50,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
     spinner.start();
     double WAITING_TIME = 4.5;
     ros::Duration delay_seconds(WAITING_TIME); 
+    ROS_INFO("Waiting %f seconds before starting integration tests.", WAITING_TIME);
     delay_seconds.sleep();
     /* Test T-01: Test connectivity to the simulation node. */
     bool connected = sim.connected();
@@ -259,6 +260,7 @@ void test_physical_twin_control(int argc, char** argv)
             return;             
         }
         arm_group.execute(master_plan);
+        delay_seconds.sleep();
 
         simulation_gripper.open();
         physical_gripper.open();
