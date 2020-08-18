@@ -18,6 +18,9 @@ Then you will need to change the values for the ROS_IP, the ROS_MASTER, and setu
 
 In order for MoveIt to be able to control the Niryo One in real time, you will need to synchronize the clocks. This can be done very efficiently by setting a ptpd master on a node of the network and connecting clients to it.  
 
+`ptpd -V -m -i <interface> # Start a ptpd master.`
+`ptpd -V -s -i <interface> # Start a ptpd slave.`
+
 Once you have done that, install Docker in your machine and execute the `./run_container` script. 
 It will take some time to setup because we have to assemble a ROS kinetic image. 
 
