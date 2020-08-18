@@ -52,13 +52,14 @@ bool digital_twin_integration_tests(int argc, char** argv)
     ros::Duration delay_seconds(WAITING_TIME); 
     ROS_INFO("Waiting %f seconds before starting integration tests.", WAITING_TIME);
     delay_seconds.sleep();
+    
     /* Test T-01: Test connectivity to the simulation node. */
     bool connected = sim.connected();
     if (!connected) {
         ROS_INFO("Waiting %f", WAITING_TIME);
         connected = sim.connected();
         if (!connected) {
-            ROS_INFO("Timeout. Check network connection.");
+            ROS_INFO("ERROR: Timeout. Check network connection.");
             ros::shutdown();
             return false;
         }
@@ -83,7 +84,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
     connected = sim.getCurrentEffort    (actual_eff); 
 
     if (!connected) {
-        ROS_INFO("Disconnected from the simulation node.");
+        ROS_INFO("ERROR: Disconnected from the simulation node. Check connection.");
         ros::shutdown();
         return false;
     }
@@ -93,17 +94,17 @@ bool digital_twin_integration_tests(int argc, char** argv)
     */
     for (uint i=0; i<6; ++i) {
         if (EXPECTED_POS[i] > actual_pos[i]+5 || EXPECTED_POS[i] < actual_pos[i]-5) {
-            ROS_INFO("Mismatch between expected position and actual position.");
+            ROS_INFO("ERROR: Mismatch between expected position and actual position.");
             ros::shutdown();
             return false;
         }
         if (EXPECTED_VEL[i] != actual_vel[i]) {
-            ROS_INFO("Mismatch between expected velocity and actual velocity.");
+            ROS_INFO("ERROR: Mismatch between expected velocity and actual velocity.");
             ros::shutdown();
             return false;
         }
         if (EXPECTED_EFF[i] > actual_eff[i]+5 || EXPECTED_EFF[i] < actual_eff[i]-5) {
-            ROS_INFO("Mismatch between expected effort and actual effort.");
+            ROS_INFO("ERROR: Mismatch between expected effort and actual effort.");
             ros::shutdown();
             return false;
         }
@@ -120,7 +121,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
         ROS_INFO("Gripper reported by simulation as OPEN. Attempting to close.");
         connected = sim.closeGripper();
         if (!connected) {
-            ROS_INFO("Disconnected from the simulation node.");
+            ROS_INFO("ERROR: Disconnected from the simulation node.");
             ros::shutdown();
             return false;
         }
@@ -129,7 +130,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
         is_gripper_open = sim.isGripperOpen();
 
         if (is_gripper_open && sim.connected()) {
-            ROS_INFO("Could not close the gripper.");
+            ROS_INFO("ERROR: Could not close the gripper.");
             ros::shutdown();
             return false;
         } 
@@ -138,7 +139,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
         ROS_INFO("Gripper reported by simulation as CLOSED. Attempting to open.");
         connected = sim.openGripper();
         if (!connected) {
-            ROS_INFO("Disconnected from the simulation node.");
+            ROS_INFO("ERROR: Disconnected from the simulation node.");
             ros::shutdown();
             return false;
         }
@@ -147,7 +148,7 @@ bool digital_twin_integration_tests(int argc, char** argv)
         is_gripper_open = sim.isGripperOpen();
 
         if (!is_gripper_open && sim.connected()) {
-            ROS_INFO("Could not open the gripper.");
+            ROS_INFO("ERROR: Could not open the gripper.");
             ros::shutdown();
             return false;
         } 
